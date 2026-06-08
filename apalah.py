@@ -21,16 +21,11 @@ with st.container():
             "🔍 Kata kunci pencarian",
             placeholder="Contoh: Serum, A, rak 2, C1"
         )
-        search_in = st.selectbox(
-            "Cari di:",
-            ["Semua kolom", "Nama", "Kategori", "Gudang", "Rak", "Shelf"],
-            index=0
-        )
     with info_col:
         st.subheader("📌 Petunjuk")
         st.markdown(
-            "- Ketik kata kunci untuk hasil cepat.\n"
-            "- Gunakan filter di samping untuk mempersempit hasil.\n"
+            "- Ketik kata kunci untuk mencari nama barang atau lokasi gudang.\n"
+            "- Hasil akan dicari secara otomatis di semua kolom utama.\n"
             "- Klik pilihan item untuk melihat detail lokasi."
         )
 
@@ -91,10 +86,6 @@ if "last_mode" not in st.session_state:
     st.session_state.last_mode = None
 if "last_n" not in st.session_state:
     st.session_state.last_n = 200
-if "gudang_filter" not in st.session_state:
-    st.session_state.gudang_filter = []
-if "kategori_filter" not in st.session_state:
-    st.session_state.kategori_filter = []
 
 df = None
 
@@ -119,8 +110,6 @@ elif mode == "Upload CSV":
         if st.session_state.last_mode != file.name:
             st.session_state.df = pd.read_csv(file)
             st.session_state.last_mode = file.name
-            st.session_state.gudang_filter = []
-            st.session_state.kategori_filter = []
         df = st.session_state.df
     else:
         st.session_state.df = None
@@ -148,63 +137,12 @@ if df is not None:
     with st.expander("📊 Lihat Semua Data Mentah", expanded=False):
         st.dataframe(df, width="stretch")
 
-    # =========================
-    # FILTER SIDEBAR
-    # =========================
-    st.sidebar.header("🔎 Filter")
-    gudang_options = sorted(df["gudang"].dropna().unique().tolist())
-    kategori_options = sorted(df["kategori"].dropna().unique().tolist())
-
-    gudang_filter = st.sidebar.multiselect(
-        "Gudang",
-        options=gudang_options,
-        key="gudang_filter"
-    )
-    kategori_filter = st.sidebar.multiselect(
-        "Kategori",
-        options=kategori_options,
-        key="kategori_filter"
-    )
-
-    sort_column = st.sidebar.selectbox(
-        "Urutkan berdasarkan:",
-        ["id", "nama", "kategori", "gudang", "rak", "shelf", "stok"],
-        index=0
-    )
-    sort_order = st.sidebar.radio(
-        "Arah urutan:",
-        ["Naik", "Turun"],
-        index=0
-    )
-
-    st.sidebar.caption("Filter dan urutkan data agar hasil pencarian lebih mudah dibaca.")
-
-    # TERAPKAN FILTER - FIX: Jangan kosong jika filter tidak dipilih
     filtered = df.copy()
-    
-    if gudang_filter:
-        filtered = filtered[filtered["gudang"].isin(gudang_filter)]
-    
-    if kategori_filter:
-        filtered = filtered[filtered["kategori"].isin(kategori_filter)]
-
-    if not filtered.empty:
-        filtered = filtered.sort_values(
-            by=sort_column,
-            ascending=(sort_order == "Naik")
-        )
 
     if search:
         start_time = time.perf_counter()
-        search_columns = {
-            "Semua kolom": ["nama", "kategori", "gudang", "rak", "shelf"],
-            "Nama": ["nama"],
-            "Kategori": ["kategori"],
-            "Gudang": ["gudang"],
-            "Rak": ["rak"],
-            "Shelf": ["shelf"]
-        }
-        filtered = search_dataframe(filtered, search, search_columns[search_in])
+        search_columns = ["nama", "kategori", "gudang", "rak", "shelf"]
+        filtered = search_dataframe(filtered, search, search_columns)
         end_time = time.perf_counter()
         search_time = (end_time - start_time) * 1000
     else:
@@ -234,12 +172,6 @@ if df is not None:
     col3.metric("Rata-rata Stok", round(filtered["stok"].mean(), 2) if not filtered.empty else 0)
     col4.metric("Total Item (Keseluruhan)", len(df))
 
-    # Grafik stok per gudang - hanya muncul jika ada hasil
-    if search and not filtered.empty:
-        st.markdown("### 📊 Visualisasi Stok Per Gudang")
-        stok_per_gudang = filtered.groupby("gudang")["stok"].sum()
-        st.bar_chart(stok_per_gudang)
-
     # =========================
     # HASIL PENCARIAN / DAFTAR
     # =========================
@@ -249,34 +181,9 @@ if df is not None:
 
         if not filtered.empty:
             st.dataframe(filtered, width="stretch")
-
-            st.subheader("📍 Detail Lokasi Barang")
-            options = [
-                f"{row['id']} - {row['nama']} (Gudang {row['gudang']} / Rak {row['rak']} / {row['shelf']})"
-                for _, row in filtered.iterrows()
-            ]
-
-            selected = st.selectbox("Pilih item untuk detail lokasi:", options)
-            selected_id = int(selected.split(" - ")[0])
-            detail = filtered[filtered["id"] == selected_id].iloc[0]
-
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.success("📍 Lokasi Barang")
-                st.write(f"**Nama:** {detail['nama']}")
-                st.write(f"**Kategori:** {detail['kategori']}")
-                st.write(f"**Lokasi:** Gudang **{detail['gudang']}** → Rak **{detail['rak']}** → Shelf **{detail['shelf']}**")
-                st.write(f"**Stok:** {detail['stok']} pcs")
-            with col_b:
-                # Ringkasan stok per gudang untuk item yang sama
-                nama_item = detail['nama']
-                sama = df[df["nama"] == nama_item].groupby("gudang")["stok"].sum().reset_index()
-                sama.columns = ["Gudang", "Total Stok"]
-                st.info(f"📊 Distribusi stok '{nama_item}' per gudang:")
-                st.dataframe(sama, width="stretch", hide_index=True)
         else:
             st.error("❌ Tidak ada barang yang cocok dengan pencarian.")
-            st.info("💡 Coba ubah kata kunci, atau perluas filter gudang/kategori di sidebar.")
+            st.info("💡 Coba ubah kata kunci pencarian atau gunakan istilah lain.")
     else:
         st.info(
             "🔍 **Masukkan kata kunci pencarian** di atas untuk menemukan barang berdasarkan nama, kategori, gudang, rak, atau shelf."
