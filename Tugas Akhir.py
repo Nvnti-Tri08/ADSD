@@ -527,7 +527,7 @@ else:
         row["Stok"]  = f"{r['Stok']} {r['Satuan']}"
         tampil.append(row)
 
-    st.dataframe(tampil, use_container_width=True, hide_index=True)
+    st.dataframe(tampil, width="stretch", hide_index=True)
 
 # ── Penjelasan algoritma ───────────────────────────────────
 with st.expander("📖 Penjelasan Lengkap Algoritma"):

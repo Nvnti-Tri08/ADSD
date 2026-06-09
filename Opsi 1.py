@@ -288,7 +288,7 @@ else:
         row["Gaji"] = f"Rp {r['Gaji']:,}"
         tampil.append(row)
 
-    st.dataframe(tampil, use_container_width=True, hide_index=True)
+    st.dataframe(tampil, width="stretch", hide_index=True)
 
 # --- Penjelasan algoritma (ekspander) ---
 with st.expander("📖 Penjelasan Algoritma"):
