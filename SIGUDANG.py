@@ -284,7 +284,7 @@ def tampilkan_sidebar():
         st.markdown("""
             <div style='font-size:2.8rem'>🏭</div>
             <h1 style='margin:6px 0 2px; font-size:1.9rem; font-weight:800'>SIGUDANG</h1>
-            <p style='margin-top:0; opacity:.6'>Sistem Informasi Gudang Skincare</p>
+            <p style='margin-top:0; opacity:.6'>Sistem Inventaris Gudang Skincare</p>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
